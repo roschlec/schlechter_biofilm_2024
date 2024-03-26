@@ -7,7 +7,7 @@ library(ComplexHeatmap)
 library(circlize)
 
 #     Dependencies
-source(here("script", "theme_rs.R"))
+source(here("src", "theme_rs.R"))
 
 #     Labels
 lab_biofilm <- c("None/Weak", "Moderate", "Strong", "Extreme")
@@ -18,10 +18,10 @@ palette_biofilm <- brewer.pal(name = "BuPu", 9)[c(3,5,7,9)]
 names(palette_biofilm) <- c("none/weak", "moderate", "strong", "extreme")
 
 #     Import Metadata
-strain = read.csv(here("data", "raw", "strain.csv"), header = T)
+strain = read.csv(here("data", "strain.csv"), header = T)
 
 #     Import in vitro biofilm dataset
-biofilm = read.csv(here("data", "raw", "biofilm.csv"), header = T) %>% 
+biofilm = read.csv(here("data", "biofilm.csv"), header = T) %>% 
       left_join(., strain, by = c("year", "strain")) %>% 
       mutate(type = case_when(
                   type == "weak" ~ "none/weak",
@@ -63,7 +63,7 @@ biofilm_strength = biofilm %>%
       left_join(., biofilm, by = c("strain", "medium"))
 
 #     In vitro antibiotic resistance
-abr <- read.csv(here("data", "raw", "strain_abr.csv"), header = TRUE)
+abr <- read.csv(here("data", "strain_abr.csv"), header = TRUE)
 
 abr_long <- abr %>% 
       separate_rows(antibiotic.resistance, sep = ", ") %>% 
