@@ -10,8 +10,8 @@ library(patchwork)
 library(ggrepel)
 
 #     Dependencies
-source(here("script", "theme_rs.R"))
-source(here("script", "01data_analysis_invitro.R"))
+source(here("src", "theme_rs.R"))
+source(here("src", "01data_analysis_invitro.R"))
 
 #     Data
 cfu_biofilm <- cfu_biofilm %>% filter(dpi != 0)
