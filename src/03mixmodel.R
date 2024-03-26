@@ -7,7 +7,7 @@ library(patchwork)
 library(tidyverse)
 
 #     Dependencies
-source(here("script", "01data_analysis_invitro.R"))
+source(here("src", "01data_analysis_invitro.R"))
 
 #     Set seed
 set.seed(1)
@@ -96,7 +96,7 @@ df$success = factor(df$success, levels = population)
 #### FIGURE 6 ####
 lapply(names(list_plot), function(.x) {
   ggsave(
-    path = here("output", "plots"),
+    path = here("output"),
     filename = paste0(.x, ".pdf"),
     scale = 1,
     plot = list_plot[[.x]]
