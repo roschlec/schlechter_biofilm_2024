@@ -1,13 +1,14 @@
 #!/bin/bash
 
 #   Create a data folder
-mkdir data
+mkdir -p data
 
 #   Download data from zenodo
 Rscript src/00download_zenodo.R
+echo "Data was downloaded successfully!" 
 
 #   Create output folder
-mkdir output
+mkdir -p output
 
 #   Run R scripts
 Rscript src/01data_analysis_invitro.R
