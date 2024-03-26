@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 ###   Analysis in planta
 #     Libraries
 library(tidyverse)

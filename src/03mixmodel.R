@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 ###   Mixture models of bacterial populations in planta
 #    Libraries
 library(here)
