@@ -8,7 +8,7 @@ Raw data is storaged in [Zenodo](https://zenodo.org/records/10871054):
 
 File | Data type | Content
 :---: | :---: | :---:
-`biofilm.csv` | CSV | In vitro screening of 174 _E. coli_ strains
+`biofilm.csv` | CSV | _In vitro_ screening of 174 _E. coli_ strains
 `cfu.csv` | CSV | CFU data _E. coli_ strains in _V. locusta_
 `strain.csv` | CSV | _E. coli_ strain IDs
 `strain_abr.csv` | CSV | _E. coli_ antibiotic resistance
@@ -17,7 +17,7 @@ File | Data type | Content
 ##  Scripts
 Script | Information
 :---: | :---:
-`download_data.sh` | Bash script to download
+`download_data.sh` | Bash script to download the raw data
 `analysis.sh` | Bash script to run the _in vitro_ and _in planta_ analyses
 `01data_analysis_invitro.R` | Data cleaning, analysis and figures related to _in vitro_ screening
 `02data_analysis_inplanta.R` | Data cleaning, analysis and figures related to _in planta_ experiments
