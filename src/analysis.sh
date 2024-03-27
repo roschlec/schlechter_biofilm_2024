@@ -1,18 +1,5 @@
 #!/bin/bash/env bash
 
-#   Install R dependencies
-Rscript src/dependencies.R
-
-#   Create a data folder
-mkdir -p data
-
-#   Download data from zenodo
-if Rscript src/download_zenodo.R ; then
-    echo "Data was downloaded successfully!" 
-else
-    echo "Fail!"
-fi
-
 #   Create output folder
 mkdir -p output
 
