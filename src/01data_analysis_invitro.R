@@ -75,7 +75,7 @@ abr_long <- abr %>%
                   values_from = resistance,
                   values_fill = 0) %>% 
       mutate(sum_ar = rowSums(across(where(is.numeric))),
-             mar = sum_ar/25)
+             mar = sum_ar/32)
 
 #     In planta
 #     CFU dataset
