@@ -79,7 +79,7 @@ abr_long <- abr %>%
 
 #     In planta
 #     CFU dataset
-cfu = read.csv(here("data", "raw", "cfu.csv"), header = T) %>% 
+cfu = read.csv(here("data", "cfu.csv"), header = T) %>% 
       drop_na %>% 
       filter(copies > 0)
 
