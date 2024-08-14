@@ -50,3 +50,5 @@ rsconnect/
 
 # Data file
 data/
+output/
+manuscript/
