@@ -226,8 +226,10 @@ dev.off()
 
 ####  FIGURE 4 ####
 cfu_biofilm %>% 
-      ggplot(aes(logcfu, logcopies, fill = strain))+
+      ggplot(aes(logcfu, logcopies, fill = type))+
+      facet_wrap(~strain)+
       geom_point(pch = 21, alpha = 0.6, size = 1.5)+
+      geom_abline(slope = 1)+
       theme_rs()+
       theme(aspect.ratio = 1)+
       scale_y_continuous(name = "Bacterial density\n[log10 CFU gFW-1]", limits = c(2,11), breaks = seq(2,11,2))+
