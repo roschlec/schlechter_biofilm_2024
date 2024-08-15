@@ -10,6 +10,7 @@ library(multcompView)
 library(forcats)
 library(patchwork)
 library(ggrepel)
+library(emmeans)
 
 #     Dependencies
 source(here("src", "theme_rs.R"))
@@ -61,9 +62,6 @@ vf1Id = varIdent(form = ~1|dpi)
 vf2Id = varIdent(form = ~1|type)
 vf3Id = varIdent(form = ~1|strain)
 vf4Id = varIdent(form = ~1|exp)
-vf5Id = varIdent(form = ~1|dpi*type)
-vf6Id = varIdent(form = ~1|dpi*strain)
-vf7Id = varIdent(form = ~1|dpi*exp)
 
 ####  TYPE OF BIOFILM   ####
 #     GLS
@@ -72,33 +70,33 @@ M1id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf1Id, data = cfu_biof
 M2id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf2Id, data = cfu_biofilm)
 M3id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf3Id, data = cfu_biofilm)
 M4id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf4Id, data = cfu_biofilm)
-M5id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf5Id, data = cfu_biofilm)
-M6id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf6Id, data = cfu_biofilm)
-M7id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf7Id, data = cfu_biofilm)
 
 #     MODEL SELECTION
-anova(M1, M1id, M2id, M3id, M4id, M5id, M6id, M7id)
-anova(M1, M7id) # best model
+anova(M1, M1id, M2id, M3id, M4id)
+anova(M1, M4id) # best model
 
 #     CHECK RESIDUALS AND VARIANCE
-E2 <- resid(M7id, type = "normalized")
+E2 <- resid(M4id, type = "normalized")
 coplot(E2 ~ type | dpi, ylab = "Ordinary residuals", data = cfu_biofilm)
 qqnorm(E2)
 
 #     ANOVA ON BEST MODEL
-anova(M7id)
+anova(M4id)
 
 #     MEAN COMPARISON
-em_M7id = emmeans(M7id, ~ type * dpi, data = cfu_biofilm)
-contrast(em_M7id, 'pairwise', type = 'response', adjust = "bonferroni") %>% tidy %>% write.csv(., 'output/data/pairwise_copies_M7id_type.csv')
+em_M4id = emmeans(M4id, ~ type * dpi, data = cfu_biofilm)
+contrast(em_M4id, 'pairwise', type = 'response', adjust = "bonferroni") %>% 
+      tidy %>% 
+      write.csv(., 'output/data/pairwise_copies_M4id_type.csv')
 
 #     CREATE DATA FRAME
-df_M7id = cld(em_M7id) %>% 
+df_M4id = cld(em_M4id) %>% 
       tidy() %>% 
       data.frame() %>% 
       arrange(dpi,type) %>% 
       mutate_if(is.character, str_trim)
-df_M7id$type <- factor(df_M7id$type, levels = c("none/weak", "moderate", "strong", "extreme"))
+df_M4id$type <- factor(df_M4id$type, 
+                       levels = c("none/weak", "moderate", "strong", "extreme"))
 
 
 
@@ -109,40 +107,39 @@ M1sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf1Id, data = cfu_bi
 M2sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf2Id, data = cfu_biofilm)
 M3sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf3Id, data = cfu_biofilm)
 M4sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf4Id, data = cfu_biofilm)
-M5sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf5Id, data = cfu_biofilm)
-M6sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf6Id, data = cfu_biofilm)
-M7sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf7Id, data = cfu_biofilm)
 
 #     MODEL SELECTION
-anova(M1s, M1sid, M2sid, M3sid, M4sid, M5sid, M6sid, M7sid)
-anova(M1s, M7sid)
+anova(M1s, M1sid, M2sid, M3sid, M4sid)
+anova(M1s, M4sid)
 
 #     CHECK RESIDUALS AND VARIANCE
-E2 <- resid(M7sid, type = "normalized")
+E2 <- resid(M4sid, type = "normalized")
 coplot(E2 ~ strain | dpi, ylab = "Ordinary residuals", data = cfu_biofilm)
 qqnorm(E2)
-summary(M7sid)
+summary(M4sid)
 
 #     ANOVA ON BEST MODEL
-anova(M7sid)
+anova(M4sid)
 
 #     MEAN COMPARISON
-em_M7sid_strain = emmeans(M7sid, ~ strain * as.factor(dpi), data = cfu_biofilm)
-contrast(em_M7sid_strain, 'pairwise', type = 'response', adjust = "bonferroni") %>% tidy %>% write.csv(., 'output/data/pairwise_copies_M7sid_strain.csv')
+em_M4sid_strain = emmeans(M4sid, ~ strain * as.factor(dpi), data = cfu_biofilm)
+contrast(em_M4sid_strain, 'pairwise', type = 'response', adjust = "bonferroni") %>% 
+      tidy %>% 
+      write.csv(., 'output/data/pairwise_copies_M4sid_strain.csv')
 
 #     CREATE DATA FRAME
-df_M7sid = cld(em_M7sid_strain) %>% 
+df_M4sid = cld(em_M4sid_strain) %>% 
       tidy() %>% 
       left_join(., unique(cfu_biofilm[,c(1,3,6)]), by = c("strain", "dpi")) %>% 
       data.frame() %>% 
       mutate_if(is.character, str_trim)
-df_M7sid$type = factor(df_M7sid$type, levels = c("none/weak", "moderate", "strong", "extreme"))
-df_M7sid$dpi = factor(df_M7sid$dpi, levels = c("3", "7", "14", "21"))
-df_M7sid$strain = factor(df_M7sid$strain, levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))
+df_M4sid$type = factor(df_M4sid$type, levels = c("none/weak", "moderate", "strong", "extreme"))
+df_M4sid$dpi = factor(df_M4sid$dpi, levels = c("0", "3", "7", "14", "21"))
+df_M4sid$strain = factor(df_M4sid$strain, levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))
 
 
 ####  FIGURE 5 #####
-f5a <- df_M7id %>% 
+f5a <- df_M4id %>% 
       ggplot(aes(x = dpi, y = estimate, fill = type))+
       facet_wrap(~type, ncol = 4)+
       geom_jitter(data = cfu_biofilm, aes(x = dpi, y = logcopies, color = type),
@@ -154,12 +151,12 @@ f5a <- df_M7id %>%
       theme(aspect.ratio = 1)+
       guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)), fill = "none")+
       scale_y_continuous(name = "Log10 copies gFW-1", limits = c(2,12), breaks = seq(2,12,2))+
-      scale_x_continuous(name = "Time [dpi]", limits = c(0, 25), breaks = c(3,7,14,21))+
+      scale_x_continuous(name = "Time [dpi]", limits = c(0, 25), breaks = c(0, 3, 7, 14, 21))+
       scale_color_manual(values = palette_biofilm, labels = lab_biofilm)
 
-f5b <- df_M7sid %>% 
+f5b <- df_M4sid %>% 
       ggplot(aes(x = strain, y = estimate, fill = type))+
-      facet_wrap(~as.factor(dpi), ncol = 4)+
+      facet_wrap(~as.factor(dpi), ncol = 5)+
       geom_jitter(data = cfu_biofilm, aes(x = strain, y = logcopies, color = type),
                   width = 0.2, alpha = 0.8, size = 2, stroke = 0)+
       geom_point(size = 2, stroke = 0.5, fill = "black", color = "grey", pch=21, position = position_dodge(width = 2))+
