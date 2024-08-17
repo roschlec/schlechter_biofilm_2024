@@ -13,48 +13,49 @@ library(ggrepel)
 library(emmeans)
 
 #     Dependencies
-source(here("src", "theme_rs.R"))
-source(here("src", "01data_analysis_invitro.R"))
+source(here("src", "00data_clean.R"))
 
-#     Data
-cfu_biofilm <- cfu_biofilm %>% filter(dpi != 0)
-cfu_biofilm$strain <- factor(cfu_biofilm$strain, levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))
+##    Correlation between CFU and qPCR data
+#     Extract the estimated coefficient and its standard error
+model_corr <- lmer(logcopies ~ logcfu + (logcfu|type), data = corr_cfu_biofilm)
+summary_model <- summary(model_corr)
 
-#     Summary
-cfu_biofilm_summaryAll = cfu_biofilm %>% 
-      group_by(dpi, type, strain, OD) %>% 
-      summarise(mean_cfu = mean(logcfu),
-                sd_cfu = sd(logcfu),
-                cv_cfu = 100*sd_cfu/mean_cfu,
-                mean_copies = mean(logcopies),
-                sd_copies = sd(logcopies),
-                cv_copies = 100*sd_copies/mean_copies,
-                n = length(logcfu),
-                .groups = "drop")
-cfu_biofilm_summaryAll$strain = factor(cfu_biofilm_summaryAll$strain, # for ABTCAA
-                                       levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))
+#     Extract the random effects for each group
+random_effects <- ranef(model_corr)$type
+random_effects
 
-cfu_biofilm_summary_type = cfu_biofilm %>% 
-      group_by(dpi, type) %>% 
-      summarise(mean_cfu = mean(logcfu),
-                sd_cfu = sd(logcfu),
-                cv_cfu = 100*sd_cfu/mean_cfu,
-                mean_copies = mean(logcopies),
-                sd_copies = sd(logcopies),
-                cv_copies = 100*sd_copies/mean_copies,
-                n = length(logcfu))
+#     Extract the fixed effects
+fixed_effects <- fixef(model_corr)
+fixed_effects
 
-cfu_biofilm_summary_exp = cfu_biofilm %>% 
-      group_by(dpi, exp) %>% 
-      summarise(mean_cfu = mean(logcfu),
-                sd_cfu = sd(logcfu),
-                cv_cfu = 100*sd_cfu/mean_cfu,
-                mean_copies = mean(logcopies),
-                sd_copies = sd(logcopies),
-                cv_copies = 100*sd_copies/mean_copies,
-                n = length(logcfu)) %>% na.omit
-lab_exp = cfu_biofilm_summary_exp %>% filter(dpi == "21")
-lab_exp$exp = factor(lab_exp$exp)
+#     Extract the random slopes and their standard errors
+var_cor <- as.data.frame(VarCorr(model_corr))
+std_errs <- sqrt(var_cor[var_cor$grp == "type" & var_cor$var1 == "logcfu", "vcov"])
+
+#     Perform hypothesis tests
+results <- data.frame(type = rownames(random_effects), 
+                      slope = random_effects[, "logcfu"], 
+                      std_err = std_errs) %>% 
+      mutate(
+            intercept = fixed_effects["(Intercept)"] + random_effects[,"(Intercept)"],
+            m = slope + fixed_effects["logcfu"],
+            z_value = (m - 1)/std_err,
+            p_value = 2 * pnorm(-abs(z_value)))
+
+# Output the results
+results
+
+# Correlations
+corr_cfu_biofilm %>% 
+      group_by(type) %>% 
+      tally
+
+correlation_all <- corr_cfu_biofilm %>% 
+      cor_test(logcfu, logcopies, alternative = "greater", method = "pearson")
+
+correlation_qpcr_cfu <- corr_cfu_biofilm %>% 
+      group_by(type) %>% 
+      cor_test(logcfu, logcopies, alternative = "greater", method = "pearson")
 
 ##    GLS
 #     Variance structures
@@ -65,11 +66,11 @@ vf4Id = varIdent(form = ~1|exp)
 
 ####  TYPE OF BIOFILM   ####
 #     GLS
-M1    <- gls(logcopies ~ type * as.factor(dpi), data = cfu_biofilm)
-M1id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf1Id, data = cfu_biofilm)
-M2id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf2Id, data = cfu_biofilm)
-M3id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf3Id, data = cfu_biofilm)
-M4id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf4Id, data = cfu_biofilm)
+M1    <- gls(logcopies ~ type * as.factor(dpi), data = corr_cfu_biofilm)
+M1id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf1Id, data = corr_cfu_biofilm)
+M2id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf2Id, data = corr_cfu_biofilm)
+M3id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf3Id, data = corr_cfu_biofilm)
+M4id  <- gls(logcopies ~ type * as.factor(dpi), weights = vf4Id, data = corr_cfu_biofilm)
 
 #     MODEL SELECTION
 anova(M1, M1id, M2id, M3id, M4id)
@@ -77,15 +78,15 @@ anova(M1, M4id) # best model
 
 #     CHECK RESIDUALS AND VARIANCE
 E2 <- resid(M4id, type = "normalized")
-coplot(E2 ~ type | dpi, ylab = "Ordinary residuals", data = cfu_biofilm)
+coplot(E2 ~ type | dpi, ylab = "Ordinary residuals", data = corr_cfu_biofilm)
 qqnorm(E2)
 
 #     ANOVA ON BEST MODEL
 anova(M4id)
 
 #     MEAN COMPARISON
-em_M4id = emmeans(M4id, ~ type * dpi, data = cfu_biofilm)
-contrast(em_M4id, 'pairwise', type = 'response', adjust = "bonferroni") %>% 
+em_M4id = emmeans(M4id, ~ type * dpi, data = corr_cfu_biofilm)
+contrast(em_M4id, 'pairwise', type = 'response', adjust = "BH") %>% 
       tidy %>% 
       write.csv(., 'output/data/pairwise_copies_M4id_type.csv')
 
@@ -99,14 +100,13 @@ df_M4id$type <- factor(df_M4id$type,
                        levels = c("none/weak", "moderate", "strong", "extreme"))
 
 
-
 ####  STRAIN   ####
 #     GLS
-M1s   <- gls(logcopies ~ strain * as.factor(dpi), data = cfu_biofilm)
-M1sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf1Id, data = cfu_biofilm)
-M2sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf2Id, data = cfu_biofilm)
-M3sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf3Id, data = cfu_biofilm)
-M4sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf4Id, data = cfu_biofilm)
+M1s   <- gls(logcopies ~ strain * as.factor(dpi), data = corr_cfu_biofilm)
+M1sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf1Id, data = corr_cfu_biofilm)
+M2sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf2Id, data = corr_cfu_biofilm)
+M3sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf3Id, data = corr_cfu_biofilm)
+M4sid <- gls(logcopies ~ strain * as.factor(dpi), weights = vf4Id, data = corr_cfu_biofilm)
 
 #     MODEL SELECTION
 anova(M1s, M1sid, M2sid, M3sid, M4sid)
@@ -114,7 +114,7 @@ anova(M1s, M4sid)
 
 #     CHECK RESIDUALS AND VARIANCE
 E2 <- resid(M4sid, type = "normalized")
-coplot(E2 ~ strain | dpi, ylab = "Ordinary residuals", data = cfu_biofilm)
+coplot(E2 ~ strain | dpi, ylab = "Ordinary residuals", data = corr_cfu_biofilm)
 qqnorm(E2)
 summary(M4sid)
 
@@ -122,7 +122,7 @@ summary(M4sid)
 anova(M4sid)
 
 #     MEAN COMPARISON
-em_M4sid_strain = emmeans(M4sid, ~ strain * as.factor(dpi), data = cfu_biofilm)
+em_M4sid_strain = emmeans(M4sid, ~ strain * as.factor(dpi), data = corr_cfu_biofilm)
 contrast(em_M4sid_strain, 'pairwise', type = 'response', adjust = "bonferroni") %>% 
       tidy %>% 
       write.csv(., 'output/data/pairwise_copies_M4sid_strain.csv')
