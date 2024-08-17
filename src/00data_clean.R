@@ -75,3 +75,52 @@ cfu_biofilm = cfu %>%
       dplyr::select(strain, exp, dpi, cfu, copies, type, OD, category, phylogroup) %>% 
       mutate(logcfu = log10(cfu), logcopies = log10(copies),
              strain = factor(strain, levels = selected_strains))
+
+#     Remove outliers CFU and qPCR data
+lm_cfu_qpcr <- lm(logcopies ~ logcfu, data = cfu_biofilm)
+cds_cfu_qpcr <- cooks.distance(lm_cfu_qpcr)
+
+corr_cfu_biofilm <- cds_cfu_qpcr %>% 
+      as_tibble() %>% 
+      rename(cookD = value) %>% 
+      cbind(cfu_biofilm, .) %>% 
+      filter(cookD < 4*mean(cookD))
+
+#     Data
+cfu_biofilm$strain <- factor(cfu_biofilm$strain, levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))
+
+#     Summary
+cfu_biofilm_summaryAll = cfu_biofilm %>% 
+      group_by(dpi, type, strain, OD) %>% 
+      summarise(mean_cfu = mean(logcfu),
+                sd_cfu = sd(logcfu),
+                cv_cfu = 100*sd_cfu/mean_cfu,
+                mean_copies = mean(logcopies),
+                sd_copies = sd(logcopies),
+                cv_copies = 100*sd_copies/mean_copies,
+                n = length(logcfu),
+                .groups = "drop")
+cfu_biofilm_summaryAll$strain = factor(cfu_biofilm_summaryAll$strain, # for ABTCAA
+                                       levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))
+
+cfu_biofilm_summary_type = cfu_biofilm %>% 
+      group_by(dpi, type) %>% 
+      summarise(mean_cfu = mean(logcfu),
+                sd_cfu = sd(logcfu),
+                cv_cfu = 100*sd_cfu/mean_cfu,
+                mean_copies = mean(logcopies),
+                sd_copies = sd(logcopies),
+                cv_copies = 100*sd_copies/mean_copies,
+                n = length(logcfu))
+
+cfu_biofilm_summary_exp = cfu_biofilm %>% 
+      group_by(dpi, exp) %>% 
+      summarise(mean_cfu = mean(logcfu),
+                sd_cfu = sd(logcfu),
+                cv_cfu = 100*sd_cfu/mean_cfu,
+                mean_copies = mean(logcopies),
+                sd_copies = sd(logcopies),
+                cv_copies = 100*sd_copies/mean_copies,
+                n = length(logcfu)) %>% na.omit
+lab_exp = cfu_biofilm_summary_exp %>% filter(dpi == "21")
+lab_exp$exp = factor(lab_exp$exp)
