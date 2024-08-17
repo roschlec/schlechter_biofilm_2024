@@ -4,158 +4,98 @@
 #     Dependencies
 library(tidyverse)
 library(here)
-library(RColorBrewer)
-library(ComplexHeatmap)
-library(circlize)
+library(rstatix)
+library(lme4)
+library(emmeans)
 
 #     Dependencies
-source(here("src", "theme_rs.R"))
+source(here("src", "00data_clean.R"))
 
-#     Labels
-lab_biofilm <- c("None/Weak", "Moderate", "Strong", "Extreme")
-lab_medium <- c("ABTCAA", "LB-NaCl(0)")
+##    Data analysis
+biofilm$logOD <- log2(biofilm$OD)
+biofilm_filter <- biofilm %>% filter(category!='biofilm')
+biofilm_abtcaa <- biofilm_filter %>% filter(medium == 'ABTCAA')
+biofilm_lbnonacl <- biofilm_filter %>% filter(medium == 'LBNaCl')
 
-#     Color palette biofilm type
-palette_biofilm <- brewer.pal(name = "BuPu", 9)[c(3,5,7,9)]
-names(palette_biofilm) <- c("none/weak", "moderate", "strong", "extreme")
+##    Paired t-test NaCl vs ABTCAA
+ttest_result_nacl_abtcaa <- t.test(biofilm$logOD[biofilm$medium == 'LBNaCl'],
+       biofilm$logOD[biofilm$medium == 'ABTCAA'],
+       paired = TRUE)
+#     Output
+ttest_result_nacl_abtcaa$statistic
+ttest_result_nacl_abtcaa$parameter
+ttest_result_nacl_abtcaa$estimate
+ttest_result_nacl_abtcaa$p.value
 
-#     Import Metadata
-strain = read.csv(here("data", "strain.csv"), header = T)
+##    Mixed effect model for type and medium in biofilm formation
+mod_type_medium <- lmer(logOD ~ medium * type + (1|strain), data = biofilm)
+summary(mod_type_medium)
+resid(mod_type_medium) %>% qqnorm
 
-#     Import in vitro biofilm dataset
-biofilm = read.csv(here("data", "biofilm.csv"), header = T) %>% 
-      left_join(., strain, by = c("year", "strain")) %>% 
-      mutate(type = case_when(
-                  type == "weak" ~ "none/weak",
-                  type == "none" ~ "none/weak",
-                  TRUE ~ type),
-             type = factor(type, levels = c("none/weak", "moderate", "strong", "ultra"), 
-                           labels = c("none/weak", "moderate", "strong", "extreme")),
-             year = factor(year),
-             strain = factor(strain, levels = unique(strain)),
-             medium = factor(medium, labels = c("ABTCAA", "LBNaCl")),
-             source = factor(source),
-             category = factor(category),
-             phylogroup = factor(phylogroup))
+Anova(mod_type_medium, type = "III")
 
-#     Selected strains for ABR and in planta experiments
-selected_strains <- c("H2", "B456", "C1", "C13", "B368", "B545", "C30", "B466", "B471", "C15", "C160")
-
-#     Data set for correlations between media
-corBiofilmOD = biofilm %>% 
-      pivot_wider(id_cols = c(strain, phylogroup, category), names_from = medium, values_from = OD)
-
-labels_strains = corBiofilmOD %>% 
-      filter(strain %in% selected_strains)
-
-#     In vitro biofilm strength
-biofilm_strength = biofilm %>% 
-      mutate(dummy_type = case_when(
-            type=="none/weak" ~ 0,
-            type=="moderate" ~ 1,
-            type=="strong" ~ 2,
-            type=="extreme" ~ 3)) %>% 
-      pivot_wider(id_cols = strain, names_from = medium, values_from = dummy_type) %>% 
-      mutate(
-            is_LBhigher = case_when(ABTCAA == LBNaCl ~ "same", 
-                                    ABTCAA < LBNaCl ~ "high",
-                                    ABTCAA > LBNaCl ~ "low"),
-            mean_type = (ABTCAA + LBNaCl)/2) %>% 
-      pivot_longer(cols=c(ABTCAA, LBNaCl), names_to = "medium", values_to = "dummy_type") %>% 
-      left_join(., biofilm, by = c("strain", "medium"))
-
-#     In vitro antibiotic resistance
-abr <- read.csv(here("data", "strain_abr.csv"), header = TRUE)
-
-abr_long <- abr %>% 
-      separate_rows(antibiotic.resistance, sep = ", ") %>% 
-      mutate(resistance = 1) %>% 
-      pivot_wider(id_cols = c(strain, source, biofilm.in.LB.NaCl.0., biofilm.in.ABTCAA, PG),
-                  names_from = antibiotic.resistance,
-                  values_from = resistance,
-                  values_fill = 0) %>% 
-      mutate(sum_ar = rowSums(across(where(is.numeric))),
-             mar = sum_ar/32)
-
-#     In planta
-#     CFU dataset
-cfu = read.csv(here("data", "cfu.csv"), header = T) %>% 
-      drop_na %>% 
-      filter(copies > 0)
-
-#     Combining in planta and in vitro data sets
-cfu_biofilm = cfu %>% 
-      left_join(., biofilm[biofilm$medium=="ABTCAA",], by = "strain") %>%  
-      dplyr::select(strain, exp, dpi, cfu, copies, type, OD, category, phylogroup) %>% 
-      mutate(logcfu = log10(cfu), logcopies = log10(copies),
-             strain = factor(strain, levels = selected_strains))
-
-####  FIGURE 1   ####
-f1.a <- biofilm_strength %>% 
-      ggplot(aes(x = medium, y = log2(OD)))+
-      geom_violin(size = 0.5, trim = TRUE, scale = 'width', fill = 'grey90', adjust = 1.2)+
-      geom_boxplot(size = 0.5, outlier.alpha = 0, width=0.2)+
-      geom_line(aes(group = strain, color = is_LBhigher), alpha = 0.3)+
-      geom_point(aes(fill = type), pch = 21, size = 1.5, alpha = 0.5, stroke = 0.2)+
-      theme_rs()+
-      theme(aspect.ratio = 0.75)+
-      labs(y = "Biofilm (log2 OD)", x = "Medium")+
-      scale_fill_manual(values = palette_biofilm, labels = lab_biofilm)+
-      scale_color_manual(values = c("#009900", "#cc0000", "black"))+
-      scale_y_continuous(limits = c(-4,4), expand = c(0,0))+
-      scale_x_discrete(labels = lab_medium)+
-      stat_compare_means(method = 't.test', aes(label=..p.signif..), size = 6, label.x = 1.5, label.y = 3, comparisons = list(c("ABTCAA","LBNaCl")))+
-      guides(color = "none", 
-             fill = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)))
-
-f1.b <- biofilm %>% 
-      ggplot(aes(x = type, log2(OD), fill = medium, group = interaction(medium,type)))+
-      geom_violin(size=0.25, trim = TRUE, scale = 'width', adjust = 1.2)+
-      geom_jitter(aes(color = type), alpha = 0.5, size = 1.5, stroke = 0, position = position_jitterdodge(jitter.width = 0.8, dodge.width = 0.9))+
-      geom_boxplot(fill = "white", size = 0.25, outlier.alpha = 0, width = 0.1, position = position_dodge(width=0.9))+
-      theme_rs()+
-      theme(aspect.ratio = 0.75)+
-      scale_x_discrete(name = "Biofilm type", labels = lab_biofilm)+
-      scale_y_continuous(name = "Biofilm (log2 OD)", limits = c(-4,4), expand = c(0,0))+
-      scale_fill_manual(name = "Medium", values = c("grey50", 'grey80'), labels = lab_medium)+
-      scale_color_manual(values = palette_biofilm, labels = lab_biofilm)+
-      guides(fill = guide_legend(override.aes = list(shape = 1, size = 4)),
-             color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)))
-
-f1.c <- biofilm %>% 
-      filter(category != "biofilm") %>% 
-      ggplot(aes(category, log2(OD), fill = medium, group = interaction(medium, category)))+
-      geom_violin(size = 0.25, trim = TRUE, scale = 'width', adjust = 1.2)+
-      geom_jitter(aes(color = type), alpha = 0.5, size = 1.5, stroke = 0, position = position_jitterdodge(jitter.width = 0.8, dodge.width = 0.9))+
-      geom_boxplot(fill = "white", size=0.25, outlier.alpha = 0, width = 0.1, position = position_dodge(width=0.9))+
-      theme_rs()+
-      theme(aspect.ratio = 0.75)+
-      scale_x_discrete(name = "Source", labels = c("Fresh produce", "Soil", "Water"))+
-      scale_fill_manual(name = "Medium", values = c("grey50", 'grey80'), labels = lab_medium)+
-      scale_y_continuous(name = "Biofilm (log2 OD)", limits = c(-4,4), expand = c(0,0))+
-      scale_color_manual(values = palette_biofilm, labels = lab_biofilm)+
-      guides(fill = guide_legend(override.aes = list(shape = 1, size = 4)),
-             color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)))
-
-f1.d <- biofilm %>% 
-      ggplot(aes(phylogroup, log2(OD)))+
-      facet_wrap(~ medium, ncol = 1)+
-      geom_violin(size = 0.25, trim = TRUE, scale = 'width', adjust = 1.2, fill = 'grey90')+
-      geom_jitter(aes(color = type), alpha = 0.5, size = 1.5, stroke = 0, width = 0.2)+
-      geom_boxplot(fill = "white", size = 0.25, outlier.alpha = 0, width = 0.1, position = position_dodge(width = 0.9))+
-      theme_rs()+
-      theme(aspect.ratio = 0.25)+
-      scale_x_discrete(name = "Phylogroup", labels = c("A", "B1", "B2", "C", "D", "E", "F", "n.d."))+
-      scale_y_continuous(name = "Biofilm (log2 OD)", limits = c(-4,4), expand = c(0,0), breaks = seq(-4,4,2))+
-      scale_color_manual(values = palette_biofilm, labels = lab_biofilm)+
-      guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)))
+em_type_medium <- emmeans(mod_type_medium, specs = ~ medium | type)
+con_type_medium <- contrast(em_type_medium, 'pairwise', adjust = 'BH')
 
 
-((f1.a + f1.b)/(f1.c + f1.d) +
-            plot_annotation(tag_levels = "A") +
-            plot_layout(guides = "collect"))
-ggsave(here("output", "fig1.pdf"), width = 7.2, dpi = 300)
+##    Mixed effect model for category and medium in biofilm formation
+mod_cat_medium <- lmer(logOD ~ medium * category + (1|strain), data = biofilm_filter)
+summary(mod_cat_medium)
+resid(mod_cat_medium) %>% qqnorm
 
+Anova(mod_cat_medium, type = "III")
+
+em_cat_medium1 <- emmeans(mod_cat_medium, specs = ~ medium | category)
+con_cat_medium1 <- contrast(em_cat_medium1, 'pairwise', adjust = 'BH')
+
+em_cat_medium2 <- emmeans(mod_cat_medium, specs = ~ category | medium)
+con_cat_medium2 <- contrast(em_cat_medium2, 'pairwise', adjust = 'BH')
+
+
+##    Mixed effect model for phylogroup and medium in biofilm formation
+mod_phylo_medium <- lmer(logOD ~ medium * phylogroup + (1|strain), data = biofilm[biofilm$phylogroup!="not determined",])
+summary(mod_phylo_medium)
+resid(mod_phylo_medium) %>% qqnorm
+
+Anova(mod_phylo_medium, type = "III")
+
+em_phylo_medium <- emmeans(mod_phylo_medium, specs = ~ phylogroup | medium)
+con_phylo_medium <- contrast(em_phylo_medium, 'pairwise', adjust = 'BH')
+
+
+##    Biofilm formation in ABTCAA
+#     Assumptions
+#     Normality
+hist(biofilm_abtcaa$logOD, breaks = 20)
+shapiro.test(biofilm_abtcaa$logOD)
+
+#     Homoscedasticity
+bartlett.test(biofilm_abtcaa$logOD, g = biofilm_abtcaa$type)
+
+#     Kruskal-Wallis
+biofilm_abtcaa %>% kruskal_test(logOD ~ type)
+biofilm_abtcaa %>% kruskal_test(logOD ~ category)
+
+#     Dunn test
+biofilm_abtcaa %>% dunn_test(logOD ~ type, p.adjust.method = 'BH')
+
+
+##    Biofilm formation in LBnoNaCl
+#     Assumptions
+#     Normality
+hist(biofilm_lbnonacl$logOD, breaks = 20)
+shapiro.test(biofilm_lbnonacl$logOD)
+
+#     Homoscedasticity
+bartlett.test(biofilm_lbnonacl$logOD, g = biofilm_lbnonacl$type)
+
+#     Kruskal-Wallis
+biofilm_lbnonacl %>% kruskal_test(logOD ~ type)
+biofilm_lbnonacl %>% kruskal_test(logOD ~ category)
+
+#     Dunn test
+biofilm_lbnonacl %>% dunn_test(logOD ~ type, p.adjust.method = 'BH')
+biofilm_lbnonacl %>% dunn_test(logOD ~ category, p.adjust.method = 'BH')
 
 
 ####  FIGURE 2 ####
@@ -225,6 +165,24 @@ heatmap_abr
 dev.off()
 
 ####  FIGURE 4 ####
+
+
+
+corr_cfu_biofilm %>% 
+      mutate(type = factor(type, levels = names(palette_biofilm))) %>% 
+      ggplot(aes(x = logcfu, y = logcopies, group = type, fill = type))+
+      facet_wrap(~ type, ncol = 2, labeller = labeller(type = lab_biofilm))+
+      geom_point(pch = 21, alpha = 0.6, size = 1.5)+
+      geom_abline(aes(intercept = intercept, slope = m), data = results)+
+      geom_abline(slope = 1, intercept = 0, linetype = "dashed")+
+      theme_rs()+
+      theme(aspect.ratio = 1)+
+      scale_y_continuous(name = "Bacterial density\n[log10 CFU gFW-1]", limits = c(2,11), breaks = seq(2,11,2))+
+      scale_x_continuous(name = "Gene copy number \n[log10 yccT copies gFW-1]", limits = c(1,10), breaks = seq(2,10,2))+
+      scale_fill_manual(labels = lab_biofilm, values = palette_biofilm)+
+      guides(fill = "none")
+
+
 cfu_biofilm %>% 
       ggplot(aes(logcfu, logcopies, fill = type))+
       facet_wrap(~strain)+
@@ -282,25 +240,3 @@ fS1a + fS1b + fS1c
 ggsave(here("output", "figS1.pdf"), width = 7.2, height = 8, dpi = 300)
 
 #### Data analysis ####
-##    Data analysis
-#     GLS
-biofilm_filter = biofilm %>% 
-      filter(category!='biofilm' & type != 'none/weak')
-
-#     Regression models in ABTCAA
-lm_abtcaa   = lm(log2(OD) ~ type * category, data = biofilm_filter[biofilm_filter$medium=='ABTCAA',])
-summary(lm_abtcaa)
-lm_abtcaa %>% resid %>% qqnorm
-bartlett.test(log2(biofilm_filter$OD[biofilm_filter$medium == 'ABTCAA']), 
-              g = biofilm_filter$type[biofilm_filter$medium == 'ABTCAA'])
-anova(lm_abtcaa)
-emmeans(lm_abtcaa, ~ category | type, data = biofilm_filter[biofilm_filter$medium=='ABTCAA',]) %>% contrast(., 'pairwise', adjust = "bonferroni", type = "response")
-emmeans(lm_abtcaa, ~ type | category, data = biofilm_filter[biofilm_filter$medium=='ABTCAA',]) %>% contrast(., 'pairwise', adjust = "bonferroni", type = "response")
-
-#     Regression models in LB-NaCl(0)
-lm_lbnonacl = lm(log2(OD) ~ type * category, data = biofilm_filter[biofilm_filter$medium=='LBNaCl',])
-summary(lm_lbnonacl)
-lm_lbnonacl %>% resid %>% qqnorm
-anova(lm_lbnonacl)
-emmeans(lm_lbnonacl, ~ category | type, data = biofilm_filter[biofilm_filter$medium=='LBNaCl',]) %>% contrast(., "pairwise", adjust = "bonferroni", type = "response")
-emmeans(lm_lbnonacl, ~ type | category, data = biofilm_filter[biofilm_filter$medium=='LBNaCl',]) %>% contrast(., "pairwise", adjust = "bonferroni", type = "response")
