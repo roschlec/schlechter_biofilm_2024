@@ -63,6 +63,15 @@ abr_long <- abr %>%
       mutate(sum_ar = rowSums(across(where(is.numeric))),
              mar = sum_ar/32)
 
+biofilm_mar <- biofilm %>% 
+      select(strain, medium, type, logOD) %>% 
+      left_join(., abr_long[,c("strain", "mar")], by = "strain") %>% 
+      na.omit
+
+biofilm_plant_mar <- cfu_biofilm %>% 
+      select(strain, dpi, type, logcopies) %>% 
+      left_join(., abr_long[,c("strain", "mar")], by = "strain")
+
 #     In planta
 #     CFU dataset
 cfu = read.csv(here("data", "cfu.csv"), header = T) %>% 
@@ -85,6 +94,22 @@ corr_cfu_biofilm <- cds_cfu_qpcr %>%
       rename(cookD = value) %>% 
       cbind(cfu_biofilm, .) %>% 
       filter(cookD < 4*mean(cookD))
+corr_cfu_biofilm %>% tally
+
+filtered_out <- cds_cfu_qpcr %>% 
+      as_tibble() %>% 
+      rename(cookD = value) %>% 
+      cbind(cfu_biofilm, .) %>% 
+      filter(cookD >= 4*mean(cookD)) %>% 
+      select(strain, dpi, type, logcfu, logcopies) %>% 
+      mutate(diff = logcopies - logcfu)
+filtered_out %>% tally
+
+filtered_out %>% 
+      ggplot(aes(x = strain, y = diff, color = type))+
+      geom_point()+
+      geom_hline(aes(yintercept = 0))+
+      theme_rs()
 
 #     Data
 cfu_biofilm$strain <- factor(cfu_biofilm$strain, levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))

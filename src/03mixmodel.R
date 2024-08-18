@@ -12,10 +12,10 @@ library(tidyverse)
 source(here("src", "01data_analysis_invitro.R"))
 
 #     Set seed
-set.seed(1)
+set.seed(1990)
 
 #     Define variables
-dpi = c("7", "14", "21") # Days post inoculation
+dpi = c("3", "7", "14", "21") # Days post inoculation
 population = c("population1", "population2", "populationtotal") # (sub)populations
 biofilm_type = c("none/weak", "moderate", "strong", "extreme") # in vitro type of biofilm
 
@@ -33,7 +33,7 @@ list_mixmdl <- list()
 l <- 1
 
 #     Loop over each biofilm type and time
-for(i in 1:length(time)){
+for(i in 1:length(dpi)){
   for(j in 1:length(biofilm_type)){
         x = cfu_biofilm$logcopies[cfu_biofilm$type==biofilm_type[j] & cfu_biofilm$dpi==dpi[i]]
         m = mean(cfu_biofilm$logcopies[cfu_biofilm$type==biofilm_type[j] & cfu_biofilm$dpi==dpi[i]])
@@ -92,7 +92,7 @@ for (i in 1:length(list_mixmdl)){
 
 df %<>% separate(label, into = c('type', 'dpi'), sep = "_") %>% na.omit
 df$type = factor(df$type, levels = c("none/weak", "moderate", "strong", "extreme"))
-df$dpi = factor(df$dpi, levels = c("7", "14", "21"))
+df$dpi = factor(df$dpi, levels = c("3", "7", "14", "21"))
 df$success = factor(df$success, levels = population)
 
 #### FIGURE 6 ####

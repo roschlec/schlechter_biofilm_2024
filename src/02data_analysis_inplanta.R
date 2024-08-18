@@ -44,6 +44,7 @@ results <- data.frame(type = rownames(random_effects),
 
 # Output the results
 results
+results$type <- factor(results$type, levels = c('none/weak', 'moderate', 'strong', 'extreme'))
 
 # Correlations
 corr_cfu_biofilm %>% 
@@ -137,90 +138,12 @@ df_M4sid$type = factor(df_M4sid$type, levels = c("none/weak", "moderate", "stron
 df_M4sid$dpi = factor(df_M4sid$dpi, levels = c("0", "3", "7", "14", "21"))
 df_M4sid$strain = factor(df_M4sid$strain, levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))
 
+### MAR vs PERSISTENCE
+mod_mar <- lm(logcopies ~ mar*type*dpi, data = biofilm_plant_mar[biofilm_plant_mar$type != 'none/weak',])
+summary(mod_mar)
+resid(mod_mar) %>% qqnorm
 
-####  FIGURE 5 #####
-f5a <- df_M4id %>% 
-      ggplot(aes(x = dpi, y = estimate, fill = type))+
-      facet_wrap(~type, ncol = 4)+
-      geom_jitter(data = cfu_biofilm, aes(x = dpi, y = logcopies, color = type),
-                  width = 0.9, alpha = 0.8, size = 2, stroke = 0)+
-      geom_point(size = 2, stroke = 0.5, fill = "black", color = "grey", pch=21, position = position_dodge(width = 2))+
-      geom_text(aes(label = .group, y = 11.5), position = position_dodge(width = 2))+
-      geom_line(alpha = 0.5, linetype = "dashed")+
-      theme_rs()+
-      theme(aspect.ratio = 1)+
-      guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)), fill = "none")+
-      scale_y_continuous(name = "Log10 copies gFW-1", limits = c(2,12), breaks = seq(2,12,2))+
-      scale_x_continuous(name = "Time [dpi]", limits = c(0, 25), breaks = c(0, 3, 7, 14, 21))+
-      scale_color_manual(values = palette_biofilm, labels = lab_biofilm)
-
-f5b <- df_M4sid %>% 
-      ggplot(aes(x = strain, y = estimate, fill = type))+
-      facet_wrap(~as.factor(dpi), ncol = 5)+
-      geom_jitter(data = cfu_biofilm, aes(x = strain, y = logcopies, color = type),
-                  width = 0.2, alpha = 0.8, size = 2, stroke = 0)+
-      geom_point(size = 2, stroke = 0.5, fill = "black", color = "grey", pch=21, position = position_dodge(width = 2))+
-      geom_text(aes(label = .group, y=11.5), position = position_dodge(width = 0.9))+
-      theme_rs()+
-      theme(aspect.ratio = 1,
-            axis.text.x = element_text(angle=90, vjust = 0.5, hjust = 1))+
-      guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)),
-             fill = "none")+
-      scale_y_continuous(name = "Log10 copies gFW-1", limits = c(2,12), breaks = seq(2,12,2))+
-      scale_x_discrete(name = "Strain")+
-      scale_color_manual(values = palette_biofilm, labels = lab_biofilm)
-
-f5a/f5b+
-      plot_annotation(tag_levels = "A")+
-      plot_layout(guides = "collect")
-ggsave(here("output", "fig5.pdf"), width = 7.2, dpi = 300)
-
-
-####  FIGURE S2   ####
-fs2a <- cfu_biofilm_summary_type %>% 
-      ggplot(aes(x = dpi, y = cv_copies, fill = type, color = type))+
-      geom_line(linewidth = 1, alpha = 0.8)+
-      geom_point(pch = 21, size = 2.5, stroke = 0.5, color = "black")+
-      theme_rs()+
-      theme(aspect.ratio = 0.75)+
-      scale_shape(solid = TRUE)+
-      scale_y_continuous(name = "Coef. of Variation [%]", limits = c(0,35), expand = c(0,0))+
-      scale_x_continuous(name = "Time [dpi]", limits = c(-2,23), expand = c(0,0))+
-      scale_color_manual(values = palette_biofilm, labels = lab_biofilm)+
-      scale_fill_manual(values = palette_biofilm, labels = lab_biofilm)+
-      guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)), fill = "none")
-
-fs2b <- cfu_biofilm_summaryAll %>% 
-      ggplot(aes(x = dpi, y = cv_copies, fill = type, color = type, group = strain))+
-      geom_line(aes(group = interaction(type,strain)), linewidth = 1, alpha = 0.8)+
-      geom_point(pch = 21, size = 2.5, stroke = 0.5, color = "black", alpha = 1)+
-      theme_rs()+
-      theme(aspect.ratio = 0.75)+
-      scale_shape(solid = TRUE)+
-      scale_y_continuous(name = "Coef. of Variation [%]", limits = c(0,35), expand = c(0,0))+
-      scale_x_continuous(name = "Time [dpi]", limits = c(-2,23), expand = c(0,0))+
-      scale_color_manual(values = palette_biofilm, labels = lab_biofilm)+
-      scale_fill_manual(values = palette_biofilm, labels = lab_biofilm)+
-      guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)), fill = "none")
-
-fs2c <- cfu_biofilm_summary_exp %>% 
-      ggplot(., aes(x = dpi, y = cv_copies, group = as.factor(exp)))+
-      geom_line(linewidth = 0.7)+
-      geom_point(size = 2.5, stroke = 0 , color = "black", alpha = 1)+
-      geom_text_repel(data = lab_exp, aes(label = exp),
-                      color = "red",
-                      force             = 0.1,
-                      nudge_x           = 1,
-                      direction         = "y",
-                      hjust             = -1,
-                      segment.size      = 0.5)+
-      theme_rs()+
-      theme(aspect.ratio = 0.75)+
-      scale_shape(solid = TRUE)+
-      scale_y_continuous(name = "Coef. of Variation [%]", limits = c(0,38), expand = c(0,0), breaks = seq(0,30,10))+
-      scale_x_continuous(name = "Time [dpi]", limits = c(-2,24), expand = c(0,0))
-
-fs2a + fs2b + fs2c +
-      plot_annotation(tag_levels = "A")+
-      plot_layout(guides = "collect")
-ggsave(here("output", "figs2.pdf"), width = 7.2, dpi = 300)
+anova(mod_mar)
+aov(logcopies ~ mar*type*dpi, data = biofilm_plant_mar[biofilm_plant_mar$type != 'none/weak',]) %>% 
+      tidy() %>% 
+      mutate(partialR2 = 100*sumsq/sum(sumsq))
