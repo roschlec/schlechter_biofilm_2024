@@ -7,6 +7,7 @@ library(mixtools)
 library(magrittr)
 library(patchwork)
 library(tidyverse)
+library(gridExtra)
 
 #     Dependencies
 source(here("src", "01data_analysis_invitro.R"))
@@ -106,3 +107,9 @@ lapply(names(list_plot), function(.x) {
     plot = list_plot[[.x]]
   )
 })
+
+names(list_plot)
+
+pdf(file = here("output", "fig6.pdf"), width = 8, useDingbats = FALSE)
+do.call(grid.arrange, c(list_plot, ncol=4, nrow=4))
+dev.off()
