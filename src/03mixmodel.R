@@ -10,6 +10,7 @@ library(tidyverse)
 
 #     Dependencies
 source(here("src", "01data_analysis_invitro.R"))
+cfu_biofilm$type <- str_replace(cfu_biofilm$type, '/', '_')
 
 #     Set seed
 set.seed(1990)
@@ -17,7 +18,7 @@ set.seed(1990)
 #     Define variables
 dpi = c("3", "7", "14", "21") # Days post inoculation
 population = c("population1", "population2", "populationtotal") # (sub)populations
-biofilm_type = c("none/weak", "moderate", "strong", "extreme") # in vitro type of biofilm
+biofilm_type = c("none_weak", "moderate", "strong", "extreme") # in vitro type of biofilm
 
 #     Plotting function to overlay mixture models
 plot_mix_comps <- function(x, mu, sigma, lam) {
@@ -91,14 +92,15 @@ for (i in 1:length(list_mixmdl)){
 }
 
 df %<>% separate(label, into = c('type', 'dpi'), sep = "_") %>% na.omit
-df$type = factor(df$type, levels = c("none/weak", "moderate", "strong", "extreme"))
+df$type <- str_replace(df$type, '/', '_')
+df$type = factor(df$type, levels = c("none_weak", "moderate", "strong", "extreme"))
 df$dpi = factor(df$dpi, levels = c("3", "7", "14", "21"))
 df$success = factor(df$success, levels = population)
 
 #### FIGURE 6 ####
 lapply(names(list_plot), function(.x) {
   ggsave(
-    path = here("output"),
+    path = here("output", "mixmodel"),
     filename = paste0(.x, ".pdf"),
     scale = 1,
     plot = list_plot[[.x]]
