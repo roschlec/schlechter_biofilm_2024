@@ -11,7 +11,9 @@ strain = read.csv(here("data", "strain.csv"), header = T)
 #     Import in vitro biofilm dataset
 biofilm = read.csv(here("data", "biofilm.csv"), header = T) %>% 
       left_join(., strain, by = c("year", "strain")) %>% 
-      mutate(type = case_when(
+      mutate(
+            logOD = log2(OD),
+            type = case_when(
             type == "weak" ~ "none/weak",
             type == "none" ~ "none/weak",
             TRUE ~ type),

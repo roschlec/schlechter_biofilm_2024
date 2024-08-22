@@ -92,7 +92,7 @@ contrast(em_M4id, 'pairwise', type = 'response', adjust = "BH") %>%
       write.csv(., 'output/data/pairwise_copies_M4id_type.csv')
 
 #     CREATE DATA FRAME
-df_M4id = cld(em_M4id) %>% 
+df_M4id = cld(em_M4id, Letters = c("a", "b", "c", "d")) %>% 
       tidy() %>% 
       data.frame() %>% 
       arrange(dpi,type) %>% 
@@ -129,7 +129,7 @@ contrast(em_M4sid_strain, 'pairwise', type = 'response', adjust = "bonferroni") 
       write.csv(., 'output/data/pairwise_copies_M4sid_strain.csv')
 
 #     CREATE DATA FRAME
-df_M4sid = cld(em_M4sid_strain) %>% 
+df_M4sid = cld(em_M4sid_strain, Letters = c("a", "b", "c", "d")) %>% 
       tidy() %>% 
       left_join(., unique(cfu_biofilm[,c(1,3,6)]), by = c("strain", "dpi")) %>% 
       data.frame() %>% 

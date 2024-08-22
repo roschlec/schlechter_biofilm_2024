@@ -164,16 +164,13 @@ corr_cfu_biofilm %>%
       geom_point(pch = 21, alpha = 0.6, size = 1.5)+
       geom_abline(aes(intercept = intercept, slope = m), data = results)+
       geom_abline(slope = 1, intercept = 0, linetype = "dashed")+
-      geom_text(data = results, 
-                aes(x = 1, y = 10.5, label = paste('b = ',sprintf('%.2f', m))),
-                hjust = 'inward')+
-      geom_text(data = correlation_qpcr_cfu, 
-                aes(x = 1, y = 9.5, label = paste('r = ',sprintf('%.2f', cor))),
-                hjust = 'inward')+
+      geom_text(data = results, aes(x = 1, y = 10.5, label = paste('b = ',sprintf('%.2f', m))), hjust = 'inward')+
+      geom_text(data = correlation_qpcr_cfu, aes(x = 1, y = 9.5, label = paste('r = ',sprintf('%.2f', cor))), hjust = 'inward')+
+      geom_text(data = correlation_qpcr_cfu, aes(x = 1, y = 8.5, label = paste('p < 0.05')), hjust = 'inward')+
       theme_rs()+
       theme(aspect.ratio = 1)+
-      scale_y_continuous(name = "Bacterial density\n[log10 CFU gFW-1]", limits = c(2,11), breaks = seq(2,11,2))+
-      scale_x_continuous(name = "Gene copy number \n[log10 yccT copies gFW-1]", limits = c(1,10), breaks = seq(2,10,2))+
+      scale_y_continuous(name = bquote("Bacterial density ["~log[10] ~ "CFU" ~ gFW^-1~"]"), limits = c(2,11), breaks = seq(2,11,2))+
+      scale_x_continuous(name = bquote("Gene copy number ["~log[10] ~ "yccT copies" ~ gFW^-1~"]"), limits = c(1,10), breaks = seq(2,10,2))+
       scale_fill_manual(values = palette_biofilm)+
       guides(fill = "none")
 ggsave(here("output", "fig4.pdf"), width = 7, dpi = 300)
@@ -181,17 +178,17 @@ ggsave(here("output", "fig4.pdf"), width = 7, dpi = 300)
 ####  FIGURE 5 #####
 f5a <- df_M4id %>% 
       ggplot(aes(x = dpi, y = estimate, fill = type))+
-      facet_wrap(~type, ncol = 4)+
+      facet_wrap(~type, ncol = 4, labeller = labeller(type = lab_biofilm))+
       geom_jitter(data = cfu_biofilm, aes(x = dpi, y = logcopies, color = type),
                   width = 0.9, alpha = 0.8, size = 2, stroke = 0)+
       geom_point(size = 2, stroke = 0.5, fill = "black", color = "grey", pch=21, position = position_dodge(width = 2))+
-      geom_text(aes(label = .group, y = 11.5), 
+      geom_text(aes(label = .group, y = 13), hjust = 1, size = 3, 
                 position = position_dodge(width = 2), angle = 90)+
       geom_line(alpha = 0.5, linetype = "dashed")+
       theme_rs()+
       theme(aspect.ratio = 1)+
       guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)), fill = "none")+
-      scale_y_continuous(name = "Log10 copies gFW-1", limits = c(2,12), breaks = seq(2,12,2))+
+      scale_y_continuous(name = bquote(log[10] ~ "yccT copies" ~ gFW^-1), limits = c(2,13), breaks = seq(2,12,2))+
       scale_x_continuous(name = "Time [dpi]", limits = c(0, 25), breaks = c(0, 3, 7, 14, 21))+
       scale_color_manual(values = palette_biofilm, labels = lab_biofilm)
 
@@ -201,21 +198,23 @@ f5b <- df_M4sid %>%
       geom_jitter(data = cfu_biofilm, aes(x = strain, y = logcopies, color = type),
                   width = 0.2, alpha = 0.8, size = 2, stroke = 0)+
       geom_point(size = 2, stroke = 0.5, fill = "black", color = "grey", pch=21, position = position_dodge(width = 2))+
-      geom_text(aes(label = .group, y=11.5), 
-                position = position_dodge(width = 0.9), angle = 90)+
+      geom_text(aes(label = .group, y = 13), hjust = 1, size = 3, 
+                position = position_dodge(width = 2), angle = 90)+
       theme_rs()+
       theme(aspect.ratio = 1,
-            axis.text.x = element_text(angle=90, vjust = 0.5, hjust = 1))+
+            axis.text.x = element_text(angle=90, vjust = 0.5, hjust = 1, size = 8))+
       guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)),
              fill = "none")+
-      scale_y_continuous(name = "Log10 copies gFW-1", limits = c(2,12), breaks = seq(2,12,2))+
+      scale_y_continuous(name = bquote(log[10] ~ "yccT copies" ~ gFW^-1), limits = c(2,13), breaks = seq(2,12,2))+
       scale_x_discrete(name = "Strain")+
       scale_color_manual(values = palette_biofilm, labels = lab_biofilm)
 
 f5a/f5b+
       plot_annotation(tag_levels = "A")+
       plot_layout(guides = "collect")
-ggsave(here("output", "fig5.pdf"), width = 7.2, dpi = 300)
+ggsave(here("output", "fig5.pdf"), width = 9, dpi = 300)
+ggsave(here("output", "fig5.png"), width = 9, dpi = 300)
+
 
 ####  FIGURE S1 ####
 #     Biofilm OD values for every strains
@@ -337,7 +336,7 @@ biofilm_plant_mar %>%
       theme(aspect.ratio = 1)+
       scale_color_manual(name = "Biofilm type", values = palette_biofilm, labels = lab_biofilm)+
       scale_x_continuous(limits = c(0.05, 0.7), breaks = seq(0.2, 0.6, 0.2))+
-      labs(y = bquote(log[10] ~ "copies" ~ gFW^-1),
+      labs(y = bquote(log[10] ~ "yccT copies" ~ gFW^-1),
            x = "MAR")+
       guides(shape = guide_legend(title = "Time [dpi]"))
 ggsave(here("output", "figs4.pdf"), width = 9, dpi = 300)

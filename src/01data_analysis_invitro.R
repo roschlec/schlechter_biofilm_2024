@@ -12,7 +12,6 @@ library(emmeans)
 source(here("src", "00data_clean.R"))
 
 ##    Data analysis
-biofilm$logOD <- log2(biofilm$OD)
 biofilm_filter <- biofilm %>% filter(category!='biofilm')
 biofilm_abtcaa <- biofilm_filter %>% filter(medium == 'ABTCAA')
 biofilm_lbnonacl <- biofilm_filter %>% filter(medium == 'LBNaCl')
