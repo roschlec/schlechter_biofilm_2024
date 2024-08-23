@@ -122,6 +122,8 @@ list_mar_mod[[2]] %>% resid %>% qqnorm
 df_cor_mar <-biofilm_mar %>% 
       group_by(medium) %>% 
       cor_test(logOD, mar, method = 'pearson')
+cor.test(biofilm_mar$logOD[biofilm_mar$medium=="ABTCAA"], biofilm_mar$mar[biofilm_mar$medium=="ABTCAA"])
+cor.test(biofilm_mar$logOD[biofilm_mar$medium=="LBNaCl"], biofilm_mar$mar[biofilm_mar$medium=="LBNaCl"])
 
 #     Combine data frames
 df_mar <- left_join(df_mod_mar, df_cor_mar, by = 'medium', suffix = c('.mod', '.cor'))

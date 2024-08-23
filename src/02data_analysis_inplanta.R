@@ -15,6 +15,14 @@ library(emmeans)
 #     Dependencies
 source(here("src", "00data_clean.R"))
 
+##    Summary statistics
+corr_cfu_biofilm %>% 
+      group_by(dpi) %>% 
+      summarise(mean_cfu = mean(logcfu),
+                sd_cfu = sd(logcfu),
+                mean_copies = mean(logcopies),
+                sd_copies = sd(logcopies))
+
 ##    Correlation between CFU and qPCR data
 #     Extract the estimated coefficient and its standard error
 model_corr <- lmer(logcopies ~ logcfu + (logcfu|type), data = corr_cfu_biofilm)
@@ -43,8 +51,14 @@ results <- data.frame(type = rownames(random_effects),
             p_value = 2 * pnorm(-abs(z_value)))
 
 # Output the results
-results
 results$type <- factor(results$type, levels = c('none/weak', 'moderate', 'strong', 'extreme'))
+results
+
+# Prediction
+pred <- predict(model_corr, corr_cfu_biofilm, se.fit = TRUE, interval = "confidence", level = 0.90)
+corr_cfu_biofilm$pred <- pred$fit
+corr_cfu_biofilm$pred.se <- pred$se.fit
+corr_cfu_biofilm$logcopies_ideal <- corr_cfu_biofilm$logcfu
 
 # Correlations
 corr_cfu_biofilm %>% 
