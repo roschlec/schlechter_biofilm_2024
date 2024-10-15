@@ -110,8 +110,7 @@ filtered_out %>% tally
 filtered_out %>% 
       ggplot(aes(x = strain, y = diff, color = type))+
       geom_point()+
-      geom_hline(aes(yintercept = 0))+
-      theme_rs()
+      geom_hline(aes(yintercept = 0))
 
 #     Data
 cfu_biofilm$strain <- factor(cfu_biofilm$strain, levels = c("H2", "B456", "C1", "C13", "B471", "B545", "C30", "C160", "B368", "B466", "C15"))
@@ -151,3 +150,4 @@ cfu_biofilm_summary_exp = cfu_biofilm %>%
                 n = length(logcfu)) %>% na.omit
 lab_exp = cfu_biofilm_summary_exp %>% filter(dpi == "21")
 lab_exp$exp = factor(lab_exp$exp)
+

@@ -2,9 +2,11 @@
 
 ###   Analysis in planta
 #     Libraries
+library(here)
 library(tidyverse)
 library(nlme)
 library(broom)
+library(rstatix)
 library(multcomp)
 library(multcompView)
 library(forcats)
@@ -42,11 +44,11 @@ std_errs <- sqrt(var_cor[var_cor$grp == "type" & var_cor$var1 == "logcfu", "vcov
 
 #     Perform hypothesis tests
 results <- data.frame(type = rownames(random_effects), 
-                      slope = random_effects[, "logcfu"], 
+                      slope_rnd = random_effects[, "logcfu"], 
                       std_err = std_errs) %>% 
       mutate(
             intercept = fixed_effects["(Intercept)"] + random_effects[,"(Intercept)"],
-            m = slope + fixed_effects["logcfu"],
+            m = slope_rnd + fixed_effects["logcfu"],
             z_value = (m - 1)/std_err,
             p_value = 2 * pnorm(-abs(z_value)))
 

@@ -9,6 +9,7 @@ library(ComplexHeatmap)
 library(circlize)
 library(ggpubr)
 library(patchwork)
+library(ggrepel)
 
 #     Dependencies
 source(here("src", "00data_clean.R"))
@@ -33,7 +34,7 @@ f1.a <- biofilm_strength %>%
       geom_line(aes(group = strain, color = is_LBhigher), alpha = 0.3)+
       geom_point(aes(fill = type), pch = 21, size = 1.5, alpha = 0.5, stroke = 0.2)+
       theme_rs()+
-      theme(aspect.ratio = 0.75)+
+      #theme(aspect.ratio = 0.1)+
       labs(y = bquote("Biofilm (" ~ log[2] ~ OD[600] ~ ")"), x = "Medium")+
       scale_fill_manual(values = palette_biofilm, labels = lab_biofilm)+
       scale_color_manual(values = c("#009900", "#cc0000", "black"))+
@@ -49,7 +50,7 @@ f1.b <- biofilm %>%
       geom_jitter(aes(color = type), alpha = 0.5, size = 1.5, stroke = 0, position = position_jitterdodge(jitter.width = 0.8, dodge.width = 0.9))+
       geom_boxplot(fill = "white", size = 0.25, outlier.alpha = 0, width = 0.1, position = position_dodge(width=0.9))+
       theme_rs()+
-      theme(aspect.ratio = 0.75)+
+      #theme(aspect.ratio = 1)+
       scale_x_discrete(name = "Biofilm type", labels = lab_biofilm)+
       scale_y_continuous(name = bquote("Biofilm (" ~ log[2] ~ OD[600] ~ ")"), limits = c(-4,4), expand = c(0,0))+
       scale_fill_manual(name = "Medium", values = c("grey50", 'grey80'), labels = lab_medium)+
@@ -64,7 +65,7 @@ f1.c <- biofilm %>%
       geom_jitter(aes(color = type), alpha = 0.5, size = 1.5, stroke = 0, position = position_jitterdodge(jitter.width = 0.8, dodge.width = 0.9))+
       geom_boxplot(fill = "white", size=0.25, outlier.alpha = 0, width = 0.1, position = position_dodge(width=0.9))+
       theme_rs()+
-      theme(aspect.ratio = 0.75)+
+      #theme(aspect.ratio = 1)+
       scale_x_discrete(name = "Source", labels = c("Fresh produce", "Soil", "Water"))+
       scale_fill_manual(name = "Medium", values = c("grey50", 'grey80'), labels = lab_medium)+
       scale_y_continuous(name = bquote("Biofilm (" ~ log[2] ~ OD[600] ~ ")"), limits = c(-4,4), expand = c(0,0))+
@@ -73,14 +74,15 @@ f1.c <- biofilm %>%
              color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)))
 
 f1.d <- biofilm %>% 
+      filter(phylogroup != "not determined") %>% 
       ggplot(aes(phylogroup, logOD))+
       facet_wrap(~ medium, ncol = 1, labeller = labeller(medium = lab_medium))+
       geom_violin(size = 0.25, trim = TRUE, scale = 'width', adjust = 1.2, fill = 'grey90')+
       geom_jitter(aes(color = type), alpha = 0.5, size = 1.5, stroke = 0, width = 0.2)+
       geom_boxplot(fill = "white", size = 0.25, outlier.alpha = 0, width = 0.1, position = position_dodge(width = 0.9))+
       theme_rs()+
-      theme(aspect.ratio = 0.25)+
-      scale_x_discrete(name = "Phylogroup", labels = c("A", "B1", "B2", "C", "D", "E", "F", "n.d."))+
+      #theme(aspect.ratio = 0.45)+
+      scale_x_discrete(name = "Phylogroup", labels = c("A", "B1", "B2", "C", "D", "E", "F"))+
       scale_y_continuous(name = bquote("Biofilm (" ~ log[2] ~ OD[600] ~ ")"), limits = c(-4,4), expand = c(0,0), breaks = seq(-4,4,2))+
       scale_color_manual(values = palette_biofilm, labels = lab_biofilm)+
       guides(color = guide_legend(title = "Biofilm type", override.aes = list(size = 4, alpha = 1)))
@@ -162,9 +164,8 @@ corr_cfu_biofilm %>%
       ggplot(aes(x = logcfu, y = logcopies, group = type, fill = type))+
       facet_wrap(~ type, ncol = 4, labeller = labeller(type = lab_biofilm))+
       geom_point(pch = 21, alpha = 0.6, size = 1.5)+
-      #geom_ribbon(aes(y = pred, ymin = pred-pred.se, ymax = pred+pred.se))+
-      #geom_line(aes(y = pred))+
-      #geom_line(aes(y = logcopies_ideal), linetype = "dashed", color = "grey")+
+      geom_line(aes(y = pred), size = 0.8, lineend = "round")+
+      geom_line(aes(y = logcopies_ideal), lineend = "round", linetype = "3232", size = 0.8)+
       #geom_text(data = results, aes(x = 1, y = 10.5, label = paste('b = ',sprintf('%.2f', m))), hjust = 'inward')+
       geom_text(data = correlation_qpcr_cfu, aes(x = 1, y = 10.5, label = paste('r = ',sprintf('%.2f', cor), ', p < 0.05')), hjust = 'inward')+
       theme_rs()+
