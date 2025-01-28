@@ -4,7 +4,7 @@
 #     Libraries
 library(here)
 library(tidyverse)
-library(nlme)
+library(lme4)
 library(broom)
 library(rstatix)
 library(multcomp)
@@ -26,6 +26,9 @@ corr_cfu_biofilm %>%
                 sd_copies = sd(logcopies))
 
 ##    Correlation between CFU and qPCR data
+model0 <- lm(logcopies ~ logcfu, data = corr_cfu_biofilm)
+(summary_model0 <- summary(model0))
+
 #     Extract the estimated coefficient and its standard error
 model_corr <- lmer(logcopies ~ logcfu + (logcfu|type), data = corr_cfu_biofilm)
 summary_model <- summary(model_corr)

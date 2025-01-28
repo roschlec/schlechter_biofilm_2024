@@ -159,22 +159,34 @@ heatmap_abr
 dev.off()
 
 ####  FIGURE 4 #####
-corr_cfu_biofilm %>% 
+f4a <- corr_cfu_biofilm %>% 
+      mutate(type = factor(type, levels = names(palette_biofilm))) %>% 
+      ggplot(aes(x = logcfu, y = logcopies))+
+      geom_point(pch = 21, alpha = 0.4, size = 1.5)+
+      geom_text(data = correlation_all, aes(x = 1, y = 10.5, label = paste('r = ',sprintf('%.2f', cor), ', p < 0.05')), hjust = 'inward')+
+      theme_rs()+
+      scale_y_continuous(name = bquote("Bacterial density ["~log[10] ~ "CFU" ~ gFW^-1~"]"), limits = c(2,11), breaks = seq(2,11,2))+
+      scale_x_continuous(name = bquote("Gene copy number ["~log[10] ~ "yccT copies" ~ gFW^-1~"]"), limits = c(1,10), breaks = seq(2,10,2))+
+      guides(fill = "none")
+f4b <- corr_cfu_biofilm %>% 
       mutate(type = factor(type, levels = names(palette_biofilm))) %>% 
       ggplot(aes(x = logcfu, y = logcopies, group = type, fill = type))+
       facet_wrap(~ type, ncol = 4, labeller = labeller(type = lab_biofilm))+
       geom_point(pch = 21, alpha = 0.6, size = 1.5)+
-      geom_line(aes(y = pred), size = 0.8, lineend = "round")+
-      geom_line(aes(y = logcopies_ideal), lineend = "round", linetype = "3232", size = 0.8)+
+      geom_line(aes(y = pred), linewidth = 0.8, lineend = "round")+
+      geom_line(aes(y = logcopies_ideal), lineend = "round", linetype = "3232", linewidth = 0.8)+
       #geom_text(data = results, aes(x = 1, y = 10.5, label = paste('b = ',sprintf('%.2f', m))), hjust = 'inward')+
       geom_text(data = correlation_qpcr_cfu, aes(x = 1, y = 10.5, label = paste('r = ',sprintf('%.2f', cor), ', p < 0.05')), hjust = 'inward')+
       theme_rs()+
-      theme(aspect.ratio = 1)+
       scale_y_continuous(name = bquote("Bacterial density ["~log[10] ~ "CFU" ~ gFW^-1~"]"), limits = c(2,11), breaks = seq(2,11,2))+
       scale_x_continuous(name = bquote("Gene copy number ["~log[10] ~ "yccT copies" ~ gFW^-1~"]"), limits = c(1,10), breaks = seq(2,10,2))+
       scale_fill_manual(values = palette_biofilm)+
       guides(fill = "none")
-ggsave(here("output", "fig4.pdf"), width = 10, dpi = 300)
+
+f4a + f4b +
+      plot_annotation(tag_levels = "A")+
+      plot_layout(guides = "collect", widths = c(1,4))
+ggsave(here("output", "fig4.pdf"), width = 15, height = 4, dpi = 300)
 
 ####  FIGURE 5 #####
 f5a <- df_M4id %>% 
