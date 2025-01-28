@@ -5,6 +5,7 @@
 library(here)
 library(tidyverse)
 library(lme4)
+library(nlme)
 library(broom)
 library(rstatix)
 library(multcomp)
@@ -13,6 +14,7 @@ library(forcats)
 library(patchwork)
 library(ggrepel)
 library(emmeans)
+library(MuMIn)
 
 #     Dependencies
 source(here("src", "00data_clean.R"))
@@ -24,6 +26,10 @@ corr_cfu_biofilm %>%
                 sd_cfu = sd(logcfu),
                 mean_copies = mean(logcopies),
                 sd_copies = sd(logcopies))
+
+# Standardize variables
+corr_cfu_biofilm$logcopies_std <- scale(corr_cfu_biofilm$logcopies)
+corr_cfu_biofilm$dpi_std <- scale(as.numeric(corr_cfu_biofilm$dpi))
 
 ##    Correlation between CFU and qPCR data
 model0 <- lm(logcopies ~ logcfu, data = corr_cfu_biofilm)
@@ -104,6 +110,17 @@ qqnorm(E2)
 #     ANOVA ON BEST MODEL
 anova(M4id)
 
+#     Reduced model without interaction
+M4id_reduced <- gls(logcopies ~ type + as.factor(dpi), weights = vf4Id, data = corr_cfu_biofilm)
+
+#     Calculate R² for full and reduced models
+M4id_r2_full <- r2(M4id)$R2
+M4id_r2_reduced <- r2(M4id_reduced)$R2
+
+#     Compute Cohen's f²
+M4id_f2 <- (M4id_r2_full - M4id_r2_reduced) / (1 - M4id_r2_full)
+print(M4id_f2)
+
 #     MEAN COMPARISON
 em_M4id = emmeans(M4id, ~ type * dpi, data = corr_cfu_biofilm)
 contrast(em_M4id, 'pairwise', type = 'response', adjust = "BH") %>% 
@@ -140,6 +157,17 @@ summary(M4sid)
 
 #     ANOVA ON BEST MODEL
 anova(M4sid)
+
+#     Reduced model without interaction
+M4sid_reduced <- gls(logcopies ~ strain + as.factor(dpi), weights = vf4Id, data = corr_cfu_biofilm)
+
+#     Calculate R² for full and reduced models
+M4sid_r2_full <- r2(M4sid)$R2
+M4sid_r2_reduced <- r2(M4sid_reduced)$R2
+
+#     Compute Cohen's f²
+M4sid_f2 <- (M4sid_r2_full - M4sid_r2_reduced) / (1 - M4sid_r2_full)
+print(M4sid_f2)
 
 #     MEAN COMPARISON
 em_M4sid_strain = emmeans(M4sid, ~ strain * as.factor(dpi), data = corr_cfu_biofilm)
